@@ -29,6 +29,7 @@ public class PluginBranchSpecificSettings {
     private final boolean allowMaintainersSubmit;
     private final boolean autoAddReviewers;
     private final boolean autoSubmit;
+    private final boolean dislikeWarnings;
 
     private PluginBranchSpecificSettings(final String pluginUserName,
                                          final String branch,
@@ -36,7 +37,8 @@ public class PluginBranchSpecificSettings {
                                          final String localFilePath,
                                          final boolean allowMaintainersSubmit,
                                          final boolean autoAddReviewers,
-                                         final boolean autoSubmit) {
+                                         final boolean autoSubmit,
+                                         final boolean dislikeWarnings) {
         this.pluginUserName = pluginUserName;
         this.branch = branch;
         this.fileRef = fileRef;
@@ -44,10 +46,7 @@ public class PluginBranchSpecificSettings {
         this.allowMaintainersSubmit = allowMaintainersSubmit;
         this.autoAddReviewers = autoAddReviewers;
         this.autoSubmit = autoSubmit;
-    }
-
-    public String getFileRef() {
-        return fileRef;
+        this.dislikeWarnings = dislikeWarnings;
     }
 
     public String getLocalFilePath() {
@@ -74,14 +73,21 @@ public class PluginBranchSpecificSettings {
         return pluginUserName;
     }
 
+    public boolean isDislikeWarnings() {
+        return dislikeWarnings;
+    }
+
     @Override
     public String toString() {
         return "PluginBranchSpecificSettings{" +
-                "branch='" + branch + '\'' +
+                "pluginUserName='" + pluginUserName + '\'' +
+                ", branch='" + branch + '\'' +
                 ", fileRef='" + fileRef + '\'' +
                 ", localFilePath='" + localFilePath + '\'' +
                 ", allowMaintainersSubmit=" + allowMaintainersSubmit +
                 ", autoAddReviewers=" + autoAddReviewers +
+                ", autoSubmit=" + autoSubmit +
+                ", dislikeWarnings=" + dislikeWarnings +
                 '}';
     }
 
@@ -93,6 +99,7 @@ public class PluginBranchSpecificSettings {
         private boolean allowMaintainersSubmit;
         private boolean autoAddReviewers;
         private boolean autoSubmit;
+        private boolean dislikeWarnings;
 
         private static String reduceWildcard(String input) {
             return input.contains("*")
@@ -142,9 +149,14 @@ public class PluginBranchSpecificSettings {
             return this;
         }
 
+        public PluginSettingsBuilder setDislikeWarnings(final boolean dislikeWarnings) {
+            this.dislikeWarnings = dislikeWarnings;
+            return this;
+        }
+
         public PluginBranchSpecificSettings createPluginSettings() {
             return new PluginBranchSpecificSettings(pluginUserName, branch, fileRef, localFilePath,
-                    allowMaintainersSubmit, autoAddReviewers, autoSubmit);
+                    allowMaintainersSubmit, autoAddReviewers, autoSubmit, dislikeWarnings);
         }
     }
 }

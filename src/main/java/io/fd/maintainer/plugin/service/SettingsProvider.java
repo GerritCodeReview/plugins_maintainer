@@ -56,6 +56,9 @@ public final class SettingsProvider implements ClosestMatch {
     private static final String AUTO_SUBMIT = "autosubmit";
     private static final boolean DEFAULT_AUTO_SUBMIT = false;
 
+    private static final String DISLIKE_WARNINGS = "dislikewarnings";
+    private static final boolean DEFAULT_DISLIKE_WARNINGS = false;
+
     @Inject
     private PluginConfigFactory cfg;
 
@@ -77,6 +80,7 @@ public final class SettingsProvider implements ClosestMatch {
                 .setAllowMaintainersSubmit(allowMaintainersSubmitOrDefault(branchName, closestBranch))
                 .setAutoAddReviewers(autoAddReviewersOrDefault(branchName, closestBranch))
                 .setAutoSubmit(autoSubmitOrDefault(branchName, closestBranch))
+                .setDislikeWarnings(dislikeWarningsOrDefault(branchName, closestBranch))
                 .setBranch(globalPluginConfig().getSubsections(BRANCH_SECTION)
                         .stream()
                         .filter(subSection -> subSection.equals(branchName))
@@ -95,6 +99,10 @@ public final class SettingsProvider implements ClosestMatch {
 
     private Boolean allowMaintainersSubmitOrDefault(final String branch, final String closesBranch) {
         return getKey(branch, closesBranch, ALLOW_SUBMIT, DEFAULT_ALLOW_SUBMIT, Boolean::valueOf);
+    }
+
+    private Boolean dislikeWarningsOrDefault(final String branch, final String closesBranch){
+        return getKey(branch, closesBranch, DISLIKE_WARNINGS, DEFAULT_DISLIKE_WARNINGS, Boolean::valueOf);
     }
 
     private String fileNameRefOrDefault(final String branch, final String closesBranch) {

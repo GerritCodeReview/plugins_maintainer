@@ -33,6 +33,7 @@ import com.google.gwtorm.server.OrmException;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
+import io.fd.maintainer.plugin.service.dto.PluginBranchSpecificSettings;
 import io.fd.maintainer.plugin.util.CommonTasks;
 import io.fd.maintainer.plugin.util.WarningGenerator;
 import java.io.IOException;
@@ -71,7 +72,7 @@ public class WarningPusher implements CommonTasks {
     public void sendWarnings(@Nonnull final Set<ComponentChangeWarning> comments,
                              @Nonnull final Change change,
                              @Nonnull final PatchSet patchSet,
-                             @Nonnull final String onBehalfOf) throws OrmException {
+                             @Nonnull final PluginBranchSpecificSettings settings) throws OrmException {
         if (comments.isEmpty()) {
             LOG.warn("No warnings");
             return;
@@ -81,9 +82,15 @@ public class WarningPusher implements CommonTasks {
             ChangeResource changeResource = changesCollection.parse(change.getId());
             final RevisionResource revisionResource = revisions.parse(changeResource, IdString.fromUrl("current"));
 
-            ReviewInput review = ReviewInput.dislike()
-                    .message(formatComments(comments));// review -1
-            review.onBehalfOf = onBehalfOf;
+            ReviewInput review;
+            if (settings.isDislikeWarnings()) {
+                review = ReviewInput.dislike();// review -1
+            } else {
+                review = ReviewInput.noScore();// review 0
+            }
+
+            review.message(formatComments(comments));
+            review.onBehalfOf = settings.getPluginUserName();
 
             reviewProvider.get().apply(revisionResource, review);
         } catch (IOException | RestApiException | UpdateException e) {

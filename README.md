@@ -20,4 +20,5 @@ Configuration
  - autoaddreviewers = true - if true, automaticaly matchses pachset files under their component based of maintainers file configuration
  - allowmaintainersubmit = true - if true, automaticaly post +2 on patch after all respective component maintainers have added +1
  - autosubmit = true - if true, after previous step automaticaly submits patch
+ - dislikewarnings = true - if true, if any warnings are present, -1 review is posted on patch, no review otherwise
    

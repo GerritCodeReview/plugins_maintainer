@@ -125,7 +125,7 @@ public class OnCommittersToBeAddedListener extends SelfDescribingEventListener i
 
             final Set<WarningGenerator.ComponentChangeWarning> warnings =
                     generateComponentChangeWarnings(index, renamedEntryToComponentsIndex);
-            warningPusher.sendWarnings(warnings, change, mostCurrentPatchSet, settings.getPluginUserName());
+            warningPusher.sendWarnings(warnings, change, mostCurrentPatchSet, settings);
             LOG.info("Warnings for change {} successfully added", change.getId());
         } catch (OrmException e) {
             throw new IllegalStateException("Unable to open review DB", e);
