@@ -29,9 +29,9 @@
                             <Gerrit-ReloadMode>restart</Gerrit-ReloadMode>
 
                             <Implementation-Vendor>Cisco and/or its affiliates</Implementation-Vendor>
-                            <Implementation-URL>https://wiki.fd.io/view/Maintainer</Implementation-URL>
+                            <Implementation-URL>https://gerrit.googlesource.com/plugins/maintainer</Implementation-URL>
 
-                            <Implementation-Title>Gerrit review plugin</Implementation-Title>
+                            <Implementation-Title>Maintainer plugin</Implementation-Title>
                             <Implementation-Version>${project.version}</Implementation-Version>
 
                             <Gerrit-ApiType>${Gerrit-ApiType}</Gerrit-ApiType>
