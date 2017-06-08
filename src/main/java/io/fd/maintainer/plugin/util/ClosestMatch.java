@@ -16,7 +16,7 @@
 
 package io.fd.maintainer.plugin.util;
 
-import static org.apache.commons.lang3.StringUtils.getLevenshteinDistance;
+import static org.apache.commons.lang.StringUtils.getLevenshteinDistance;
 
 import javax.annotation.Nonnull;
 

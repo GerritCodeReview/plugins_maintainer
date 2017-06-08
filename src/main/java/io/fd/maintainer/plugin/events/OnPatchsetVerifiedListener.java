@@ -98,7 +98,7 @@ public class OnPatchsetVerifiedListener extends SelfDescribingEventListener impl
                     commentAddedEvent.changeKey.get());
 
             try (final ReviewDb reviewDb = schemaFactory.open()) {
-                final int changeNumber = commentAddedEvent.change.get().number;
+                final int changeNumber = Integer.valueOf(commentAddedEvent.change.get().number);
                 final Change.Id changeId = new Change.Id(changeNumber);
                 final Change change = reviewDb.changes().get(changeId);
 
@@ -106,7 +106,7 @@ public class OnPatchsetVerifiedListener extends SelfDescribingEventListener impl
                 final PatchSet.Id currentPatchsetId = currentPatchset.getId();
 
                 final int currentPatchsetNr = currentPatchset.getPatchSetId();
-                final int processedPatchsetNr = commentAddedEvent.patchSet.get().number;
+                final int processedPatchsetNr = Integer.valueOf(commentAddedEvent.patchSet.get().number);
 
                 // to filter out reviews on older patchsets
                 if (currentPatchsetNr != processedPatchsetNr) {

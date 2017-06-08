@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.EqualsBuilder;
 import org.junit.Test;
 
 public class MaintainersParserTest {
@@ -134,6 +134,6 @@ public class MaintainersParserTest {
                 .append(true, second.getPaths().containsAll(first.getPaths()))
                 .append(true, first.getComments().containsAll(second.getComments()))
                 .append(true, second.getComments().containsAll(first.getComments()))
-                .build();
+                .isEquals();
     }
 }
