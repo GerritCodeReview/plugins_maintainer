@@ -20,7 +20,6 @@ package io.fd.maintainer.plugin.util;
 import static io.fd.maintainer.plugin.service.ComponentReviewInfo.ComponentReviewInfoState.COMPONENT_FOUND;
 import static io.fd.maintainer.plugin.service.ComponentReviewInfo.ComponentReviewInfoState.COMPONENT_NOT_FOUND;
 import static java.lang.String.format;
-import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toMap;
 
 import com.google.common.collect.LinkedListMultimap;
@@ -92,15 +91,14 @@ public interface CommonTasks extends WarningGenerator, PatchListProcessing {
                         LINE_SEPARATOR, formatFiles(componentToAffectedFileIndex.get(key)), LINE_SEPARATOR))
                 .collect(Collectors.joining(LINE_SEPARATOR));
 
+        if (componentNotFoundReviewInfos.isEmpty()) {
+            return messageComponentsFound;
+        }
+
         final String messageComponentsNotFound =
                 format("No component found for following files%s%s", LINE_SEPARATOR,
                         formatFilesWithNoComponent(componentNotFoundReviewInfos));
-
-        if (nonNull(messageComponentsNotFound)) {
-            return messageComponentsFound.concat(LINE_SEPARATOR).concat(messageComponentsNotFound);
-        } else {
-            return messageComponentsFound;
-        }
+        return messageComponentsFound.concat(LINE_SEPARATOR).concat(messageComponentsNotFound);
     }
 
     static String formatFilesWithNoComponent(final List<ComponentReviewInfo> componentNotFoundReviewInfos) {
