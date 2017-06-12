@@ -16,6 +16,8 @@
 
 package io.fd.maintainer.plugin.service;
 
+import static io.fd.maintainer.plugin.service.PatchsetReviewInfo.ReviewState.COMMITTER_ATTENTION_NEEDED;
+
 import com.google.gerrit.reviewdb.client.Account;
 import com.google.gerrit.server.patch.PatchList;
 import io.fd.maintainer.plugin.parser.ComponentPath;
@@ -51,6 +53,14 @@ public class PatchsetReviewInfo implements PatchListProcessing {
                 .map(index::getComponentForPath)
                 .filter(index::isReviewComponent)
                 .collect(Collectors.toSet());
+
+        // no components detected, do nothing
+        if (componentsForPatchlist.isEmpty()) {
+            reviewState = COMMITTER_ATTENTION_NEEDED;
+            missingComponentReview = Collections.emptySet();
+            return;
+        }
+
         final Set<String> componentsCurrentlyReviewed = currentVerificationAuthors.stream()
                 .map(account -> index.getComponentsForMaintainer(account.getFullName()))
                 .flatMap(Collection::stream)
@@ -77,6 +87,7 @@ public class PatchsetReviewInfo implements PatchListProcessing {
 
     public enum ReviewState {
         ALL_COMPONENTS_REVIEWED,
-        MISSING_COMPONENT_REVIEW;
+        MISSING_COMPONENT_REVIEW,
+        COMMITTER_ATTENTION_NEEDED;// case when patchset does not contain any files under specified components
     }
 }

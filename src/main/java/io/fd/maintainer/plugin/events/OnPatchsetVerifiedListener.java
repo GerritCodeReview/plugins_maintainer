@@ -17,6 +17,7 @@
 package io.fd.maintainer.plugin.events;
 
 import static io.fd.maintainer.plugin.service.PatchsetReviewInfo.ReviewState.ALL_COMPONENTS_REVIEWED;
+import static io.fd.maintainer.plugin.service.PatchsetReviewInfo.ReviewState.COMMITTER_ATTENTION_NEEDED;
 import static java.lang.String.format;
 
 import com.google.gerrit.reviewdb.client.Account;
@@ -152,7 +153,11 @@ public class OnPatchsetVerifiedListener extends SelfDescribingEventListener impl
                             } else {
                                 LOG.warn("Auto submit turned off");
                             }
-                        } else {
+                        } else if (patchsetReviewInfo.getReviewState() == COMMITTER_ATTENTION_NEEDED) {
+                            LOG.info("Patchset {} affects no configured components, committers attention needed",
+                                    currentPatchset.getId());
+                        }
+                        else {
                             LOG.info(
                                     "Patchset {} does not have verifications from following components yet : {}",
                                     currentPatchset.getId(), patchsetReviewInfo.getMissingComponentReview());
