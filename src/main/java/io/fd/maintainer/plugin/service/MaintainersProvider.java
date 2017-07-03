@@ -20,6 +20,7 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 
 import com.google.gerrit.reviewdb.client.Change;
+import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.reviewdb.server.ReviewDb;
 import com.google.gerrit.server.git.GitRepositoryManager;
 import com.google.gwtorm.server.OrmException;
@@ -65,10 +66,12 @@ public class MaintainersProvider implements ClosestMatch, PatchListProcessing {
     }
 
     @Nonnull
-    public List<ComponentInfo> getMaintainersInfo(@Nonnull final String branchName, final int changeNumber) {
+    public List<ComponentInfo> getMaintainersInfo(@Nonnull final String branchName, final int changeNumber,
+                                                  @Nonnull final Project.NameKey projectKey) {
 
         // get configuration for branch of change
-        final PluginBranchSpecificSettings settings = settingsProvider.getBranchSpecificSettings(branchName);
+        final PluginBranchSpecificSettings settings =
+                settingsProvider.getBranchSpecificSettings(branchName, projectKey);
 
         try (final ReviewDb reviewDb = schemaFactory.open()) {
             final Change change = reviewDb.changes().get(new Change.Id(changeNumber));

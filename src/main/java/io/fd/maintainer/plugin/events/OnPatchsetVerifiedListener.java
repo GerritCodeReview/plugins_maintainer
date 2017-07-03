@@ -24,6 +24,7 @@ import com.google.gerrit.reviewdb.client.Account;
 import com.google.gerrit.reviewdb.client.Change;
 import com.google.gerrit.reviewdb.client.PatchSet;
 import com.google.gerrit.reviewdb.client.PatchSetApproval;
+import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.reviewdb.server.ReviewDb;
 import com.google.gerrit.server.change.ChangesCollection;
 import com.google.gerrit.server.data.AccountAttribute;
@@ -83,8 +84,9 @@ public class OnPatchsetVerifiedListener extends SelfDescribingEventListener impl
     protected void consumeDescribedEvent(final Event event) {
         CommentAddedEvent commentAddedEvent = CommentAddedEvent.class.cast(event);
 
+        final Project.NameKey projectKey = new Project.NameKey(commentAddedEvent.change.get().project);
         final PluginBranchSpecificSettings settings =
-                settingsProvider.getBranchSpecificSettings(commentAddedEvent.change.get().branch);
+                settingsProvider.getBranchSpecificSettings(commentAddedEvent.change.get().branch, projectKey);
 
         if (!settings.isAllowMaintainersSubmit()) {
             LOG.warn("Maintainers submit is turned off");
@@ -125,7 +127,7 @@ public class OnPatchsetVerifiedListener extends SelfDescribingEventListener impl
                         final MaintainersIndex maintainersIndex =
                                 new MaintainersIndex(maintainersProvider
                                         .getMaintainersInfo(commentAddedEvent.getBranchNameKey().get(),
-                                                changeNumber));
+                                                changeNumber, projectKey));
 
                         LOG.info("Getting current patch list for patchset {}", currentPatchset.getId());
                         final PatchList patchList = getPatchList(patchListCache, change, currentPatchset);
@@ -156,8 +158,7 @@ public class OnPatchsetVerifiedListener extends SelfDescribingEventListener impl
                         } else if (patchsetReviewInfo.getReviewState() == COMMITTER_ATTENTION_NEEDED) {
                             LOG.info("Patchset {} affects no configured components, committers attention needed",
                                     currentPatchset.getId());
-                        }
-                        else {
+                        } else {
                             LOG.info(
                                     "Patchset {} does not have verifications from following components yet : {}",
                                     currentPatchset.getId(), patchsetReviewInfo.getMissingComponentReview());
