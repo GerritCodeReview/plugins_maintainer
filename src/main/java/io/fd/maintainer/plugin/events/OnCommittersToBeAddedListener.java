@@ -18,6 +18,7 @@ package io.fd.maintainer.plugin.events;
 
 import com.google.gerrit.reviewdb.client.Change;
 import com.google.gerrit.reviewdb.client.PatchSet;
+import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.reviewdb.server.ReviewDb;
 import com.google.gerrit.server.change.ChangesCollection;
 import com.google.gerrit.server.change.PostReview;
@@ -95,8 +96,9 @@ public class OnCommittersToBeAddedListener extends SelfDescribingEventListener i
         final PatchSetCreatedEvent patchSetCreatedEvent = PatchSetCreatedEvent.class.cast(event);
 
         final ChangeAttribute changeAttributes = patchSetCreatedEvent.change.get();
+        final Project.NameKey projectKey = new Project.NameKey(changeAttributes.project);
         final PluginBranchSpecificSettings settings =
-                settingsProvider.getBranchSpecificSettings(changeAttributes.branch);
+                settingsProvider.getBranchSpecificSettings(changeAttributes.branch, projectKey);
 
         if (!settings.isAutoAddReviewers()) {
             LOG.warn("Auto add reviewers option turned off");
@@ -112,7 +114,8 @@ public class OnCommittersToBeAddedListener extends SelfDescribingEventListener i
             LOG.info("Processing change {} | patchset {}", change.getId(), mostCurrentPatchSet.getId());
             final MaintainersIndex index =
                     new MaintainersIndex(
-                            maintainersProvider.getMaintainersInfo(changeAttributes.branch, Integer.valueOf(changeAttributes.number)));
+                            maintainersProvider.getMaintainersInfo(changeAttributes.branch,
+                                    Integer.valueOf(changeAttributes.number), projectKey));
 
             reviewerPusher.addRelevantReviewers(index, change, mostCurrentPatchSet, settings.getPluginUserName());
             LOG.info("Reviewers for change {} successfully added", change.getId());

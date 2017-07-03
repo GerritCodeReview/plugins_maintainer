@@ -18,8 +18,10 @@ package io.fd.maintainer.plugin.service;
 
 import static java.lang.String.format;
 
+import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.reviewdb.client.RefNames;
 import com.google.gerrit.server.config.PluginConfigFactory;
+import com.google.gerrit.server.project.NoSuchProjectException;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.fd.maintainer.plugin.service.dto.PluginBranchSpecificSettings;
@@ -62,26 +64,28 @@ public final class SettingsProvider implements ClosestMatch {
     @Inject
     private PluginConfigFactory cfg;
 
-    public PluginBranchSpecificSettings getBranchSpecificSettings(@Nonnull final String branchName) {
+    public PluginBranchSpecificSettings getBranchSpecificSettings(@Nonnull final String branchName,
+                                                                  @Nonnull final Project.NameKey projectKey) {
 
         final String fullBranchName = branchName.startsWith(RefNames.REFS_HEADS)
                 ? branchName
                 : RefNames.REFS_HEADS.concat(branchName);
 
         LOG.info("Reading configuration for branch {}", fullBranchName);
-        return getSettingsForBranch(fullBranchName, closesBranchMatch(fullBranchName));
+        return getSettingsForBranch(fullBranchName, closesBranchMatch(fullBranchName, projectKey), projectKey);
     }
 
-    private PluginBranchSpecificSettings getSettingsForBranch(final String branchName, final String closestBranch) {
+    private PluginBranchSpecificSettings getSettingsForBranch(final String branchName, final String closestBranch,
+                                                              final Project.NameKey projectKey) {
         return new PluginBranchSpecificSettings.PluginSettingsBuilder()
-                .setPluginUserName(pluginUserOrThrow(branchName, closestBranch))
-                .setLocalFilePath(fileNameRefOrDefault(branchName, closestBranch))
-                .setFileRef(filePathRefOrDefault(branchName, closestBranch))
-                .setAllowMaintainersSubmit(allowMaintainersSubmitOrDefault(branchName, closestBranch))
-                .setAutoAddReviewers(autoAddReviewersOrDefault(branchName, closestBranch))
-                .setAutoSubmit(autoSubmitOrDefault(branchName, closestBranch))
-                .setDislikeWarnings(dislikeWarningsOrDefault(branchName, closestBranch))
-                .setBranch(globalPluginConfig().getSubsections(BRANCH_SECTION)
+                .setPluginUserName(pluginUserOrThrow(branchName, closestBranch, projectKey))
+                .setLocalFilePath(fileNameRefOrDefault(branchName, closestBranch, projectKey))
+                .setFileRef(filePathRefOrDefault(branchName, closestBranch, projectKey))
+                .setAllowMaintainersSubmit(allowMaintainersSubmitOrDefault(branchName, closestBranch, projectKey))
+                .setAutoAddReviewers(autoAddReviewersOrDefault(branchName, closestBranch, projectKey))
+                .setAutoSubmit(autoSubmitOrDefault(branchName, closestBranch, projectKey))
+                .setDislikeWarnings(dislikeWarningsOrDefault(branchName, closestBranch, projectKey))
+                .setBranch(projectSpecificPluginConfig(projectKey).getSubsections(BRANCH_SECTION)
                         .stream()
                         .filter(subSection -> subSection.equals(branchName))
                         .findAny()
@@ -89,34 +93,43 @@ public final class SettingsProvider implements ClosestMatch {
                 .createPluginSettings();
     }
 
-    private Boolean autoAddReviewersOrDefault(final String branch, final String closesBranch) {
-        return getKey(branch, closesBranch, AUTO_ADD_REVIEWERS, DEFAULT_AUTO_ADD_REVIEWERS, Boolean::valueOf);
+    private Boolean autoAddReviewersOrDefault(final String branch, final String closesBranch,
+                                              final Project.NameKey projectKey) {
+        return getKey(projectKey, branch, closesBranch, AUTO_ADD_REVIEWERS, DEFAULT_AUTO_ADD_REVIEWERS,
+                Boolean::valueOf);
     }
 
-    private Boolean autoSubmitOrDefault(final String branch, final String closestBranch) {
-        return getKey(branch, closestBranch, AUTO_SUBMIT, DEFAULT_AUTO_SUBMIT, Boolean::valueOf);
+    private Boolean autoSubmitOrDefault(final String branch, final String closestBranch,
+                                        final Project.NameKey projectKey) {
+        return getKey(projectKey, branch, closestBranch, AUTO_SUBMIT, DEFAULT_AUTO_SUBMIT, Boolean::valueOf);
     }
 
-    private Boolean allowMaintainersSubmitOrDefault(final String branch, final String closesBranch) {
-        return getKey(branch, closesBranch, ALLOW_SUBMIT, DEFAULT_ALLOW_SUBMIT, Boolean::valueOf);
+    private Boolean allowMaintainersSubmitOrDefault(final String branch, final String closesBranch,
+                                                    final Project.NameKey projectKey) {
+        return getKey(projectKey, branch, closesBranch, ALLOW_SUBMIT, DEFAULT_ALLOW_SUBMIT, Boolean::valueOf);
     }
 
-    private Boolean dislikeWarningsOrDefault(final String branch, final String closesBranch){
-        return getKey(branch, closesBranch, DISLIKE_WARNINGS, DEFAULT_DISLIKE_WARNINGS, Boolean::valueOf);
+    private Boolean dislikeWarningsOrDefault(final String branch, final String closesBranch,
+                                             final Project.NameKey projectKey) {
+        return getKey(projectKey, branch, closesBranch, DISLIKE_WARNINGS, DEFAULT_DISLIKE_WARNINGS, Boolean::valueOf);
     }
 
-    private String fileNameRefOrDefault(final String branch, final String closesBranch) {
-        return getKey(branch, closesBranch, MAINTAINERS_FILE_REF, DEFAULT_MAINTAINERS_FILE_REF, String::valueOf);
+    private String fileNameRefOrDefault(final String branch, final String closesBranch,
+                                        final Project.NameKey projectKey) {
+        return getKey(projectKey, branch, closesBranch, MAINTAINERS_FILE_REF, DEFAULT_MAINTAINERS_FILE_REF,
+                String::valueOf);
     }
 
-    private String filePathRefOrDefault(final String branch, final String closesBranch) {
-        return getKey(branch, closesBranch, MAINTAINERS_FILE_PATH_REF, DEFAULT_MAINTAINERS_FILE_PATH_REF,
+    private String filePathRefOrDefault(final String branch, final String closesBranch,
+                                        final Project.NameKey projectKey) {
+        return getKey(projectKey, branch, closesBranch, MAINTAINERS_FILE_PATH_REF, DEFAULT_MAINTAINERS_FILE_PATH_REF,
                 String::valueOf);
     }
 
     private String pluginUserOrThrow(final String branch,
-                                     final String alternativeBranch) {
-        final Config config = globalPluginConfig();
+                                     final String alternativeBranch,
+                                     final Project.NameKey projectKey) {
+        final Config config = projectSpecificPluginConfig(projectKey);
         return Optional.ofNullable(config.getString(BRANCH_SECTION, branch, PLUGIN_USER))
                 .orElse(Optional.ofNullable(config.getString(BRANCH_SECTION, alternativeBranch, PLUGIN_USER))
                         .orElseThrow(() -> {
@@ -125,27 +138,32 @@ public final class SettingsProvider implements ClosestMatch {
                         }));
     }
 
-    private <T> T getKey(final String branch,
+    private <T> T getKey(final Project.NameKey projectKey,
+                         final String branch,
                          final String alternativeBranch,
                          final String subKey,
                          final T defaultValue,
                          final Function<String, T> mapTo) {
-        return Optional.ofNullable(globalPluginConfig()
+        return Optional.ofNullable(projectSpecificPluginConfig(projectKey)
                 .getString(BRANCH_SECTION, branch, subKey))
                 .map(mapTo)
                 .orElse(Optional.ofNullable(
-                        globalPluginConfig().getString(BRANCH_SECTION, alternativeBranch, subKey))
+                        projectSpecificPluginConfig(projectKey).getString(BRANCH_SECTION, alternativeBranch, subKey))
                         .map(mapTo)
                         .orElse(defaultValue));
     }
 
-    private Config globalPluginConfig() {
-        return cfg.getGlobalPluginConfig(MAINTAINER_PLUGIN);
+    private Config projectSpecificPluginConfig(final Project.NameKey projectKey) {
+        try {
+            return cfg.getProjectPluginConfig(projectKey, MAINTAINER_PLUGIN);
+        } catch (NoSuchProjectException e) {
+            throw new IllegalStateException(format("Project %s not found", projectKey));
+        }
     }
 
     // match by the number of changes needed to change one String into another
-    private String closesBranchMatch(final String branchName) {
-        return globalPluginConfig().getSubsections(BRANCH_SECTION).stream()
+    private String closesBranchMatch(final String branchName, final Project.NameKey projectKey) {
+        return projectSpecificPluginConfig(projectKey).getSubsections(BRANCH_SECTION).stream()
                 .reduce((branchOne, branchTwo) -> closestMatch(branchName, branchOne, branchTwo))
                 // if non use default
                 .orElse(RefNames.REFS_HEADS);
