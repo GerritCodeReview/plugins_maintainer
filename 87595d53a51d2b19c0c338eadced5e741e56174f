@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "b9ac1906_e22c451b",
+        "filename": "pom.xml",
+        "patchSetId": 1
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 1011123
+      },
+      "writtenOn": "2017-07-03T05:47:44Z",
+      "side": 1,
+      "message": "Does this work?  In Gerrit 2.13.x the GWT version is 2.7.0\n\nhttps://gerrit.googlesource.com/gerrit/+/stable-2.13/lib/gwt/BUCK",
+      "range": {
+        "startLine": 15,
+        "startChar": 21,
+        "endLine": 15,
+        "endChar": 26
+      },
+      "revId": "87595d53a51d2b19c0c338eadced5e741e56174f",
+      "serverId": "173816e5-2b9a-37c3-8a2e-48639d4f1153",
+      "unresolved": false
+    }
+  ]
+}
