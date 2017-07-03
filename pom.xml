@@ -12,7 +12,6 @@
     <properties>
         <Gerrit-ApiType>plugin</Gerrit-ApiType>
         <Gerrit-ApiVersion>2.13</Gerrit-ApiVersion>
-        <GWT-Version>2.8.0</GWT-Version>
     </properties>
 
     <build>
