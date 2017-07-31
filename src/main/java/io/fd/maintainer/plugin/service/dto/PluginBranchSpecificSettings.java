@@ -20,10 +20,9 @@ import com.google.gerrit.reviewdb.client.RefNames;
 
 public class PluginBranchSpecificSettings {
 
-    private static final String HEAD_PART = "/" + RefNames.HEAD;
-
     private final String pluginUserName;
     private final String branch;
+    private final boolean wildcardBranch;
     private final String fileRef;
     private final String localFilePath;
     private final boolean allowMaintainersSubmit;
@@ -33,6 +32,7 @@ public class PluginBranchSpecificSettings {
 
     private PluginBranchSpecificSettings(final String pluginUserName,
                                          final String branch,
+                                         final boolean wildcardBranch,
                                          final String fileRef,
                                          final String localFilePath,
                                          final boolean allowMaintainersSubmit,
@@ -41,6 +41,7 @@ public class PluginBranchSpecificSettings {
                                          final boolean dislikeWarnings) {
         this.pluginUserName = pluginUserName;
         this.branch = branch;
+        this.wildcardBranch = wildcardBranch;
         this.fileRef = fileRef;
         this.localFilePath = localFilePath;
         this.allowMaintainersSubmit = allowMaintainersSubmit;
@@ -65,8 +66,23 @@ public class PluginBranchSpecificSettings {
         return autoSubmit;
     }
 
+    /**
+     * Rules for forming valid maintainer file ref are: <li>If branch section is wildcard - file ref will be created as
+     * combination of branch name part without wildcard + file ref</li> <li>If branch sections is not wildcard - name of
+     * the branch it self wil be used as ref </li> <li>If branch section does not contain refs/heads/ - use refs/heads/
+     * + fileref</li>
+     */
     public String fullFileRef() {
-        return branch.concat(fileRef);
+        // if for whatever reason someone uses some crazy wildcard like refs/*
+        if (!branch.contains(RefNames.REFS_HEADS)) {
+            return RefNames.REFS_HEADS + fileRef;
+        }
+
+        if (wildcardBranch) {
+            return branch + fileRef;
+        } else {
+            return branch;
+        }
     }
 
     public String getPluginUserName() {
@@ -77,23 +93,11 @@ public class PluginBranchSpecificSettings {
         return dislikeWarnings;
     }
 
-    @Override
-    public String toString() {
-        return "PluginBranchSpecificSettings{" +
-                "pluginUserName='" + pluginUserName + '\'' +
-                ", branch='" + branch + '\'' +
-                ", fileRef='" + fileRef + '\'' +
-                ", localFilePath='" + localFilePath + '\'' +
-                ", allowMaintainersSubmit=" + allowMaintainersSubmit +
-                ", autoAddReviewers=" + autoAddReviewers +
-                ", autoSubmit=" + autoSubmit +
-                ", dislikeWarnings=" + dislikeWarnings +
-                '}';
-    }
 
     public static class PluginSettingsBuilder {
         private String pluginUserName;
         private String branch;
+        private boolean wildcardBranch;
         private String fileRef;
         private String localFilePath;
         private boolean allowMaintainersSubmit;
@@ -101,16 +105,14 @@ public class PluginBranchSpecificSettings {
         private boolean autoSubmit;
         private boolean dislikeWarnings;
 
-        private static String reduceWildcard(String input) {
-            return input.contains("*")
-                    ? input.substring(0, input.indexOf("*"))
-                    : input;
-        }
-
-        private static String addEndSlash(String input) {
-            return input.endsWith("/")
-                    ? input
-                    : input.concat("/");
+        private String reduceWildcard(String input) {
+            if (input.endsWith("*")) {
+                wildcardBranch = true;
+                return input.substring(0, input.indexOf("*"));
+            } else {
+                wildcardBranch = false;
+                return input;
+            }
         }
 
         public PluginSettingsBuilder setPluginUserName(final String pluginUserName) {
@@ -119,8 +121,7 @@ public class PluginBranchSpecificSettings {
         }
 
         public PluginSettingsBuilder setFileRef(final String fileRef) {
-            // TODO - remove this replace if configuration will be changed
-            this.fileRef = fileRef.replace(HEAD_PART, "");
+            this.fileRef = fileRef;
             return this;
         }
 
@@ -140,7 +141,7 @@ public class PluginBranchSpecificSettings {
         }
 
         public PluginSettingsBuilder setBranch(final String branch) {
-            this.branch = addEndSlash(reduceWildcard(branch));
+            this.branch = reduceWildcard(branch);
             return this;
         }
 
@@ -155,7 +156,7 @@ public class PluginBranchSpecificSettings {
         }
 
         public PluginBranchSpecificSettings createPluginSettings() {
-            return new PluginBranchSpecificSettings(pluginUserName, branch, fileRef, localFilePath,
+            return new PluginBranchSpecificSettings(pluginUserName, branch, wildcardBranch, fileRef, localFilePath,
                     allowMaintainersSubmit, autoAddReviewers, autoSubmit, dislikeWarnings);
         }
     }
