@@ -116,9 +116,8 @@ public class MaintainersProvider implements ClosestMatch, PatchListProcessing {
         final RevCommit parent = getRevCommit(revWalk, headCommit.getParent(0).getId());
         LOG.info("Finding most recent maintainers file in {}", parent);
 
-
         final String parentIdName = parent.getId().getName();
-        LOG.info("Parent id name {}", parentIdName);
+        LOG.info("Parent commit : {}| id {}", parent.getShortMessage(), parentIdName);
 
         try (TreeWalk treeWalk = new TreeWalk(repository)) {
             treeWalk.addTree(parent.getTree());
@@ -132,10 +131,11 @@ public class MaintainersProvider implements ClosestMatch, PatchListProcessing {
                 ObjectLoader loader = repository.open(objectId);
 
                 // and then one can the loader to read the file
-                final ByteArrayOutputStream out = new ByteArrayOutputStream();
-                loader.copyTo(out);
-                revWalk.dispose();
-                return new String(out.toByteArray());
+                try (final ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                    loader.copyTo(out);
+                    revWalk.dispose();
+                    return new String(out.toByteArray());
+                }
             }
 
             LOG.info("Maintainers file not found in commit {}, going deep", parent.getId());
