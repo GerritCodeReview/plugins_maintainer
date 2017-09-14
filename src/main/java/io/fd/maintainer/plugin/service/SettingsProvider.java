@@ -16,8 +16,7 @@
 
 package io.fd.maintainer.plugin.service;
 
-import static java.lang.String.format;
-
+import com.google.common.annotations.VisibleForTesting;
 import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.reviewdb.client.RefNames;
 import com.google.gerrit.server.config.PluginConfigFactory;
@@ -26,12 +25,16 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.fd.maintainer.plugin.service.dto.PluginBranchSpecificSettings;
 import io.fd.maintainer.plugin.util.ClosestMatch;
-import java.util.Optional;
-import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.eclipse.jgit.lib.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import java.util.Optional;
+import java.util.function.Function;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.String.format;
 
 @Singleton
 public final class SettingsProvider implements ClosestMatch {
@@ -42,6 +45,7 @@ public final class SettingsProvider implements ClosestMatch {
     private static final String BRANCH_SECTION = "branch";
 
     private static final String PLUGIN_USER = "pluginuser";
+    private static final String DEFAULT_PLUGIN_USER = "non-existing-user";
 
     private static final String MAINTAINERS_FILE_PATH_REF = "maintainerfileref";
     private static final String DEFAULT_MAINTAINERS_FILE_PATH_REF = "master/HEAD";
@@ -64,6 +68,11 @@ public final class SettingsProvider implements ClosestMatch {
     @Inject
     private PluginConfigFactory cfg;
 
+    @VisibleForTesting
+    SettingsProvider(PluginConfigFactory cfg) {
+        this.cfg = cfg;
+    }
+
     public PluginBranchSpecificSettings getBranchSpecificSettings(@Nonnull final String branchName,
                                                                   @Nonnull final Project.NameKey projectKey) {
 
@@ -72,7 +81,24 @@ public final class SettingsProvider implements ClosestMatch {
                 : RefNames.REFS_HEADS.concat(branchName);
 
         LOG.info("Reading configuration for branch {}", fullBranchName);
-        return getSettingsForBranch(fullBranchName, closesBranchMatch(fullBranchName, projectKey), projectKey);
+        final Optional<String> closestBranch = closesBranchMatch(fullBranchName, projectKey);
+
+        if (closestBranch.isPresent()) {
+            // either current branch or some similar has config
+            return getSettingsForBranch(fullBranchName, closestBranch.get(), projectKey);
+        }
+
+        //not current nor similar branch has config, therefore return default
+        return new PluginBranchSpecificSettings.PluginSettingsBuilder()
+                .setAllowMaintainersSubmit(DEFAULT_ALLOW_SUBMIT)
+                .setAutoAddReviewers(DEFAULT_AUTO_ADD_REVIEWERS)
+                .setAutoSubmit(DEFAULT_AUTO_SUBMIT)
+                .setDislikeWarnings(DEFAULT_DISLIKE_WARNINGS)
+                .setBranch(fullBranchName)
+                .setFileRef(DEFAULT_MAINTAINERS_FILE_REF)
+                .setLocalFilePath(DEFAULT_MAINTAINERS_FILE_PATH_REF)
+                .setPluginUserName(DEFAULT_PLUGIN_USER)
+                .createPluginSettings();
     }
 
     private PluginBranchSpecificSettings getSettingsForBranch(final String branchName, final String closestBranch,
@@ -162,10 +188,60 @@ public final class SettingsProvider implements ClosestMatch {
     }
 
     // match by the number of changes needed to change one String into another
-    private String closesBranchMatch(final String branchName, final Project.NameKey projectKey) {
+    private Optional<String> closesBranchMatch(final String branchName, final Project.NameKey projectKey) {
+        final BranchInfo currentBranchInfo = new BranchInfo(branchName);
         return projectSpecificPluginConfig(projectKey).getSubsections(BRANCH_SECTION).stream()
-                .reduce((branchOne, branchTwo) -> closestMatch(branchName, branchOne, branchTwo))
-                // if non use default
-                .orElse(RefNames.REFS_HEADS);
+                .map(BranchInfo::new)
+                .filter(branchInfo -> branchInfo.isAlternativeFor(currentBranchInfo))
+                .map(BranchInfo::getBranchPart)
+                .reduce((branchOne, branchTwo) -> closestMatch(branchName, branchOne, branchTwo));
+    }
+
+    static class BranchInfo {
+
+        private final boolean isWildcarded;
+        private final boolean isGerritReviewBranch;
+        private final String fullBranchName;
+        private final String branchPart;
+
+        BranchInfo(@Nonnull final String input) {
+            checkNotNull(input, "Input for %s cannot be null", this.getClass().getName());
+            final String[] parts = input.split("\\/");
+            isWildcarded = parts[parts.length - 1].trim().equals("*");
+            isGerritReviewBranch = input.trim().startsWith(RefNames.REFS_HEADS);
+            fullBranchName = input.trim();
+            if (isGerritReviewBranch) {
+                branchPart = fullBranchName.replace(RefNames.REFS_HEADS, "").replace("/*", "");
+            } else {
+                branchPart = fullBranchName;
+            }
+        }
+
+        public boolean isAlternativeFor(final BranchInfo other) {
+            if (this.isGerritReviewBranch && other.isGerritReviewBranch) {
+                // both branches are standard review branches like /refs/heads/master for ex.
+                final String[] thisBranchParts = this.branchPart.split("\\/");
+                final String[] otherBranchParts = other.branchPart.split("\\/");
+
+                return thisBranchParts[0].equals(otherBranchParts[0]);
+            }
+            return fullBranchName.equals(other.fullBranchName);
+        }
+
+        public boolean isWildcarded() {
+            return isWildcarded;
+        }
+
+        public boolean isGerritReviewBranch() {
+            return isGerritReviewBranch;
+        }
+
+        public String getFullBranchName() {
+            return fullBranchName;
+        }
+
+        public String getBranchPart() {
+            return branchPart;
+        }
     }
 }
