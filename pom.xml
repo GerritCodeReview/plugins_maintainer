@@ -6,7 +6,7 @@
 
     <groupId>io.fd.gerrit</groupId>
     <artifactId>maintainer-plugin</artifactId>
-    <version>2.13-SR4-SNAPSHOT</version>
+    <version>2.13-SR4</version>
     <packaging>jar</packaging>
 
     <properties>
