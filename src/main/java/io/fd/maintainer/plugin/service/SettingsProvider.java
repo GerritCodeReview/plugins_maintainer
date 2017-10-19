@@ -16,7 +16,7 @@
 
 package io.fd.maintainer.plugin.service;
 
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.reviewdb.client.RefNames;
 import com.google.gerrit.server.config.PluginConfigFactory;
@@ -37,7 +37,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
 
 @Singleton
-public final class SettingsProvider implements ClosestMatch {
+public class SettingsProvider implements ClosestMatch {
 
     private static final Logger LOG = LoggerFactory.getLogger(SettingsProvider.class);
 
@@ -65,11 +65,11 @@ public final class SettingsProvider implements ClosestMatch {
     private static final String DISLIKE_WARNINGS = "dislikewarnings";
     private static final boolean DEFAULT_DISLIKE_WARNINGS = false;
 
-    @Inject
-    private PluginConfigFactory cfg;
 
-    @VisibleForTesting
-    SettingsProvider(PluginConfigFactory cfg) {
+    private final PluginConfigFactory cfg;
+
+    @Inject
+    public SettingsProvider(PluginConfigFactory cfg) {
         this.cfg = cfg;
     }
 
@@ -156,12 +156,16 @@ public final class SettingsProvider implements ClosestMatch {
                                      final String alternativeBranch,
                                      final Project.NameKey projectKey) {
         final Config config = projectSpecificPluginConfig(projectKey);
-        return Optional.ofNullable(config.getString(BRANCH_SECTION, branch, PLUGIN_USER))
-                .orElse(Optional.ofNullable(config.getString(BRANCH_SECTION, alternativeBranch, PLUGIN_USER))
-                        .orElseThrow(() -> {
-                            LOG.error("Plugin user not specified for branch {}", branch);
-                            return new IllegalStateException(format("Plugin user not specified for branch %s", branch));
-                        }));
+
+        final String user = Optional.ofNullable(config.getString(BRANCH_SECTION, branch, PLUGIN_USER))
+                .orElse(config.getString(BRANCH_SECTION, alternativeBranch, PLUGIN_USER));
+
+        if (Strings.isNullOrEmpty(user)) {
+            LOG.error("Plugin user not specified for branch {}", branch);
+            throw new IllegalStateException(format("Plugin user not specified for branch %s", branch));
+        } else {
+            return user;
+        }
     }
 
     private <T> T getKey(final Project.NameKey projectKey,

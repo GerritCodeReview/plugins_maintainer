@@ -41,6 +41,7 @@ import io.fd.maintainer.plugin.util.PatchListProcessing;
 import io.fd.maintainer.plugin.util.WarningGenerator;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -93,6 +94,7 @@ public class ReviewerPusher implements WarningGenerator, PatchListProcessing, Co
                 .flatMap(Collection::stream)
                 .map(Maintainer::getName)
                 .map(accountIndex::get)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         LOG.info("Adding reviewers for change {}", change.getId());

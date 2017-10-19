@@ -80,5 +80,11 @@
             <version>1.10.19</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-testlib</artifactId>
+            <version>4.1.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

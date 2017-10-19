@@ -16,9 +16,6 @@
 
 package io.fd.maintainer.plugin.service;
 
-import static java.lang.String.format;
-import static java.util.Objects.nonNull;
-
 import com.google.gerrit.reviewdb.client.Change;
 import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.reviewdb.server.ReviewDb;
@@ -33,11 +30,6 @@ import io.fd.maintainer.plugin.parser.MaintainersParser;
 import io.fd.maintainer.plugin.service.dto.PluginBranchSpecificSettings;
 import io.fd.maintainer.plugin.util.ClosestMatch;
 import io.fd.maintainer.plugin.util.PatchListProcessing;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.Ref;
@@ -48,6 +40,16 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
+import static com.google.common.base.Preconditions.checkState;
+import static java.lang.String.format;
+import static java.util.Objects.nonNull;
 
 @Singleton
 public class MaintainersProvider implements ClosestMatch, PatchListProcessing {
@@ -68,7 +70,6 @@ public class MaintainersProvider implements ClosestMatch, PatchListProcessing {
     @Nonnull
     public List<ComponentInfo> getMaintainersInfo(@Nonnull final String branchName, final int changeNumber,
                                                   @Nonnull final Project.NameKey projectKey) {
-
         // get configuration for branch of change
         final PluginBranchSpecificSettings settings =
                 settingsProvider.getBranchSpecificSettings(branchName, projectKey);
@@ -92,15 +93,14 @@ public class MaintainersProvider implements ClosestMatch, PatchListProcessing {
                 if (nonNull(maintainersFileContent)) {
                     return maintainersParser.parseMaintainers(maintainersFileContent);
                 } else {
+                    LOG.info("Unable to find file {} in branch {}", settings.getLocalFilePath(), fullFileRef);
                     throw new IllegalStateException(
                             format("Unable to find file %s in branch %s", settings.getLocalFilePath(),
                                     fullFileRef));
                 }
-            } catch (IOException | MaintainerMismatchException e) {
-                throw new IllegalStateException(e);
             }
-
-        } catch (OrmException e) {
+        } catch (OrmException | IOException | MaintainerMismatchException e) {
+            LOG.error("Error while searching maintainers file", e);
             throw new IllegalStateException(e);
         }
     }
@@ -113,12 +113,12 @@ public class MaintainersProvider implements ClosestMatch, PatchListProcessing {
             final RevCommit headCommit) {
         LOG.info("Starting search at {}", headCommit);
 
+        checkState(headCommit.getParentCount() > 0, "Bottom of the branch has been reached and maintainers file hasnt been found");
         final RevCommit parent = getRevCommit(revWalk, headCommit.getParent(0).getId());
         LOG.info("Finding most recent maintainers file in {}", parent);
 
-
         final String parentIdName = parent.getId().getName();
-        LOG.info("Parent id name {}", parentIdName);
+        LOG.info("Parent commit : {}| id {}", parent.getShortMessage(), parentIdName);
 
         try (TreeWalk treeWalk = new TreeWalk(repository)) {
             treeWalk.addTree(parent.getTree());
@@ -132,10 +132,11 @@ public class MaintainersProvider implements ClosestMatch, PatchListProcessing {
                 ObjectLoader loader = repository.open(objectId);
 
                 // and then one can the loader to read the file
-                final ByteArrayOutputStream out = new ByteArrayOutputStream();
-                loader.copyTo(out);
-                revWalk.dispose();
-                return new String(out.toByteArray());
+                try (final ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                    loader.copyTo(out);
+                    revWalk.dispose();
+                    return new String(out.toByteArray());
+                }
             }
 
             LOG.info("Maintainers file not found in commit {}, going deep", parent.getId());
