@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ed2a7514_edb7de2a",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 4099460
+      },
+      "writtenOn": "2025-07-21T02:07:07Z",
+      "side": 1,
+      "message": "jsrnicek@cisco.com",
+      "revId": "43952f80fa00c6cdd42599e734b270bc7749c9b9",
+      "serverId": "173816e5-2b9a-37c3-8a2e-48639d4f1153"
+    }
+  ]
+}
